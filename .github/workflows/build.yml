@@ -1,50 +1,71 @@
-name: Build APK
+name: Build GhostLP APK
+
 on:
   workflow_dispatch:
   push:
     branches: [main]
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Unzip project
-        run: unzip -o "*.zip" && ls GhostLP
-      - uses: actions/setup-java@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unzip GhostLP project
+        run: |
+          unzip -o "*.zip"
+          ls -la
+          ls -la GhostLP
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: subosito/flutter-action@v2
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Force newer compileSdk for all plugins
+
+      - name: Force compile SDK 36
         run: |
           mkdir -p ~/.gradle/init.d
-          cat > ~/.gradle/init.d/sdk.gradle <<'EOF2'
+          cat > ~/.gradle/init.d/sdk.gradle <<'EOF'
           allprojects {
-            afterEvaluate { p ->
-              if (p.hasProperty('android')) {
-                p.android.compileSdkVersion 36
+            afterEvaluate { project ->
+              if (project.hasProperty("android")) {
+                project.android.compileSdkVersion 36
               }
             }
           }
-          EOF2
-      - name: Prepare Android project
-        working-directory: lp_manager
+          EOF
+
+      - name: Prepare GhostLP Android project
+        working-directory: GhostLP
         run: |
-          flutter create . --platforms=android --org com.example
+          flutter create . --platforms=android --org com.ghostlp
           flutter pub get
-          M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <queries><package android:name="app.phantom"/><package android:name="com.solflare.mobile"/></queries>\n    <application#' $M
+
+          M="android/app/src/main/AndroidManifest.xml"
+
+          sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <queries><package android:name="app.phantom"/><package android:name="com.solflare.mobile"/></queries>\n    <application#' "$M"
+
           sed -i -E 's/minSdk(Version)?[ =]+flutter\.minSdkVersion/minSdk = 23/' android/app/build.gradle* || true
-      - name: Build release APK
-        working-directory: lp_manager
-        run: flutter build apk --release
-      - name: Publish APK as a download
+
+      - name: Build GhostLP release APK
+        working-directory: GhostLP
+        run: |
+          flutter build apk --release
+
+      - name: Publish GhostLP APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: LP Manager build ${{ github.run_number }}
-          files: lp_manager/build/app/outputs/flutter-apk/app-release.apk
+          tag_name: ghostlp-build-${{ github.run_number }}
+          name: GhostLP build ${{ github.run_number }}
+          files: GhostLP/build/app/outputs/flutter-apk/app-release.apk
