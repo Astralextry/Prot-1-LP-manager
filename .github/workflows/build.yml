@@ -19,10 +19,10 @@ jobs:
       - name: Extract GhostLP
         run: |
           unzip -o GhostLP_real_backend.zip
-          echo "Project files:"
+          echo "Project contents:"
           ls -la
-          echo "lib:"
-          find lib -maxdepth 2 -type f | head -50
+          test -f pubspec.yaml
+          test -d lib
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -35,40 +35,52 @@ jobs:
         with:
           channel: stable
 
-      - name: Create Android platform
+      - name: Check Android project
         run: |
-          flutter create . \
-            --platforms=android \
-            --org com.ghostlp
+          if [ ! -d "android" ]; then
+            echo "Android folder is missing. Creating Android platform..."
+            flutter create --platforms=android .
+          else
+            echo "Existing Android project found. Keeping it."
+          fi
 
-      - name: Fix GhostLP Flutter compatibility
+      - name: Fix Flutter compatibility
         run: |
-          # Fix invalid Colors.white35
           find lib -type f -name "*.dart" -exec sed -i \
             's/Colors\.white35/Colors.white.withOpacity(0.35)/g' {} +
 
-          # Convert String app URI to Uri
           find lib -type f -name "*.dart" -exec sed -i \
             's/uri: Config\.appUri/uri: Uri.parse(Config.appUri)/g' {} +
 
-          echo "Checking fixes:"
-          grep -R "white35" lib || true
-          grep -R "uri: Config.appUri" lib || true
-
-      - name: Set GhostLP app name
+      - name: Set app name
         run: |
-          sed -i 's/android:label="[^"]*"/android:label="GhostLP"/' \
-            android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/app/src/main/AndroidManifest.xml")
+
+          if p.exists():
+              s = p.read_text()
+              s = s.replace(
+                  'android:label="Flutter Demo"',
+                  'android:label="GhostLP"'
+              )
+              s = s.replace(
+                  'android:label="${applicationName}"',
+                  'android:label="GhostLP"'
+              )
+              p.write_text(s)
+          else:
+              print("AndroidManifest.xml not found")
+          PY
 
       - name: Get dependencies
-        run: |
-          flutter pub get
+        run: flutter pub get
 
-      - name: Build GhostLP APK
-        run: |
-          flutter build apk --release
+      - name: Build GhostLP
+        run: flutter build apk --release
 
-      - name: Publish GhostLP APK
+      - name: Publish APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ghostlp-build-${{ github.run_number }}
