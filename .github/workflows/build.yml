@@ -11,7 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Unzip project
-          - name: Unzip project
         run: unzip -o "*.zip" && ls lp_manager
       - uses: actions/setup-java@v4
         with:
