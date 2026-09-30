@@ -16,13 +16,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract GhostLP
+      - name: Extract GhostLP project
         run: |
           unzip -o GhostLP_real_backend.zip
-          echo "Extracted files:"
+          echo "Project files:"
           ls -la
-          echo "Backend:"
-          ls -la backend
+          echo "Flutter project:"
+          ls -la lib
+          cat pubspec.yaml
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -35,14 +36,20 @@ jobs:
         with:
           channel: stable
 
-      - name: Prepare GhostLP
-        working-directory: backend
+      - name: Prepare Android project
         run: |
-          flutter create . --platforms=android --org com.ghostlp
+          flutter create . \
+            --platforms=android \
+            --org com.ghostlp
+
           flutter pub get
 
+      - name: Set GhostLP app name
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="GhostLP"/' \
+            android/app/src/main/AndroidManifest.xml
+
       - name: Build GhostLP APK
-        working-directory: backend
         run: |
           flutter build apk --release
 
@@ -51,4 +58,4 @@ jobs:
         with:
           tag_name: ghostlp-build-${{ github.run_number }}
           name: GhostLP build ${{ github.run_number }}
-          files: backend/build/app/outputs/flutter-apk/app-release.apk
+          files: build/app/outputs/flutter-apk/app-release.apk
