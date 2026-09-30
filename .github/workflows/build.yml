@@ -36,6 +36,7 @@ jobs:
         run: |
           flutter create . --platforms=android --org com.example
           flutter pub get
+          for d in ~/.pub-cache/hosted/pub.dev/coinbase_wallet_sdk-*/android; do touch "$d/consumer-rules.pro"; done
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <queries><package android:name="app.phantom"/><package android:name="com.solflare.mobile"/></queries>\n    <application#' $M
           sed -i -E 's/minSdk(Version)?[ =]+flutter\.minSdkVersion/minSdk = 23/' android/app/build.gradle* || true
