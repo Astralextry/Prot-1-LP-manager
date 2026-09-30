@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Unzip project
-        run: unzip -o "*.zip" && ls lp_manager
+        run: unzip -o "*.zip" && ls GhostLP
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
