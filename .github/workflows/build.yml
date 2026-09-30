@@ -16,14 +16,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract GhostLP project
+      - name: Extract GhostLP
         run: |
           unzip -o GhostLP_real_backend.zip
           echo "Project files:"
           ls -la
-          echo "Flutter project:"
-          ls -la lib
-          cat pubspec.yaml
+          echo "lib:"
+          find lib -maxdepth 2 -type f | head -50
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -36,18 +35,34 @@ jobs:
         with:
           channel: stable
 
-      - name: Prepare Android project
+      - name: Create Android platform
         run: |
           flutter create . \
             --platforms=android \
             --org com.ghostlp
 
-          flutter pub get
+      - name: Fix GhostLP Flutter compatibility
+        run: |
+          # Fix invalid Colors.white35
+          find lib -type f -name "*.dart" -exec sed -i \
+            's/Colors\.white35/Colors.white.withOpacity(0.35)/g' {} +
+
+          # Convert String app URI to Uri
+          find lib -type f -name "*.dart" -exec sed -i \
+            's/uri: Config\.appUri/uri: Uri.parse(Config.appUri)/g' {} +
+
+          echo "Checking fixes:"
+          grep -R "white35" lib || true
+          grep -R "uri: Config.appUri" lib || true
 
       - name: Set GhostLP app name
         run: |
           sed -i 's/android:label="[^"]*"/android:label="GhostLP"/' \
             android/app/src/main/AndroidManifest.xml
+
+      - name: Get dependencies
+        run: |
+          flutter pub get
 
       - name: Build GhostLP APK
         run: |
