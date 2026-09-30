@@ -19,7 +19,7 @@ jobs:
       - name: Extract GhostLP project
         run: |
           set -e
-          unzip -o GhostLP_fixed.zip
+          unzip -o GhostLP_wallet_fixed.zip
           test -f pubspec.yaml
           test -d lib
           echo "Flutter project found."
