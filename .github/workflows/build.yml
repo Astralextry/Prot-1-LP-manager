@@ -16,11 +16,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Unzip GhostLP project
+      - name: Extract GhostLP
         run: |
-          unzip -o "*.zip"
+          unzip -o GhostLP_real_backend.zip
+          echo "Extracted files:"
           ls -la
-          ls -la GhostLP
+          echo "Backend:"
+          ls -la backend
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -33,33 +35,14 @@ jobs:
         with:
           channel: stable
 
-      - name: Force compile SDK 36
-        run: |
-          mkdir -p ~/.gradle/init.d
-          cat > ~/.gradle/init.d/sdk.gradle <<'EOF'
-          allprojects {
-            afterEvaluate { project ->
-              if (project.hasProperty("android")) {
-                project.android.compileSdkVersion 36
-              }
-            }
-          }
-          EOF
-
-      - name: Prepare GhostLP Android project
-        working-directory: GhostLP
+      - name: Prepare GhostLP
+        working-directory: backend
         run: |
           flutter create . --platforms=android --org com.ghostlp
           flutter pub get
 
-          M="android/app/src/main/AndroidManifest.xml"
-
-          sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <queries><package android:name="app.phantom"/><package android:name="com.solflare.mobile"/></queries>\n    <application#' "$M"
-
-          sed -i -E 's/minSdk(Version)?[ =]+flutter\.minSdkVersion/minSdk = 23/' android/app/build.gradle* || true
-
-      - name: Build GhostLP release APK
-        working-directory: GhostLP
+      - name: Build GhostLP APK
+        working-directory: backend
         run: |
           flutter build apk --release
 
@@ -68,4 +51,4 @@ jobs:
         with:
           tag_name: ghostlp-build-${{ github.run_number }}
           name: GhostLP build ${{ github.run_number }}
-          files: GhostLP/build/app/outputs/flutter-apk/app-release.apk
+          files: backend/build/app/outputs/flutter-apk/app-release.apk
