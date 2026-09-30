@@ -1,0 +1,40 @@
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: |
+          if [ -f lp_manager.zip ]; then unzip -o lp_manager.zip; fi
+          ls lp_manager
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Prepare Android project
+        working-directory: lp_manager
+        run: |
+          flutter create . --platforms=android --org com.example
+          flutter pub get
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <queries><package android:name="app.phantom"/><package android:name="com.solflare.mobile"/></queries>\n    <application#' $M
+          sed -i -E 's/minSdk(Version)?[ =]+flutter\.minSdkVersion/minSdk = 23/' android/app/build.gradle* || true
+      - name: Build release APK
+        working-directory: lp_manager
+        run: flutter build apk --release --dart-define=REOWN_PROJECT_ID=${{ secrets.REOWN_PROJECT_ID }}
+      - name: Publish APK as a download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: LP Manager build ${{ github.run_number }}
+          files: lp_manager/build/app/outputs/flutter-apk/app-release.apk
